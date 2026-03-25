@@ -1,46 +1,55 @@
-
 pipeline {
-    agent any
+    agent any  // Utiliser n'importe quel agent disponible sur Jenkins
 
     environment {
-        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        DOCKER_IMAGE = 'tonuser/php-app:latest' // change tonuser/php-app
+        // Variables d'environnement si tu veux pousser sur Docker Hub
+        DOCKERHUB_CREDENTIALS = 'dockerhub' // ID des credentials dans Jenkins
+        IMAGE_NAME = 'tonuser/php-app:latest'
     }
 
     stages {
 
-        stage('Clone') {
+        stage('Cloner le projet') {
             steps {
-                echo 'Clonage du projet depuis GitHub...'
-                git branch: 'main', 
-                    url: 'https://github.com/thiothiod/PROJET_PHP_DEVOPS.git', 
-                    credentialsId: 'github-token'
+                // Cloner le dépôt Git
+                git branch: 'main', url: 'https://github.com/ton-user/ton-projet.git'
             }
         }
 
-        stage('Build Docker') {
+        stage('Construire Docker') {
             steps {
-                echo "Construction des images Docker depuis ${DOCKER_COMPOSE_FILE}..."
-                sh 'docker compose build'
+                //  Construire les images via docker-compose
+                sh 'docker-compose build'
             }
         }
 
-        stage('Start Docker Containers') {
+        stage('Lancer les containers') {
             steps {
-                echo 'Démarrage des containers en arrière-plan...'
-                sh 'docker compose up -d'
+                //  Lancer les containers en arrière-plan
+                sh 'docker-compose up -d'
             }
         }
 
-        stage('Push Docker Hub (Optionnel)') {
+        stage('Tester le projet') {
+            steps {
+                //  Vérifier si le container web répond
+                sh '''
+                sleep 5  # attendre que le container web soit prêt
+                curl -I http://localhost:8000 || true
+                '''
+            }
+        }
+
+        stage('Pousser sur Docker Hub (optionnel)') {
             when {
-                expression { return env.PUSH_TO_DOCKER_HUB == 'true' }
+                expression { return env.PUSH_TO_DOCKERHUB == "true" }
             }
             steps {
-                echo "Push de l'image sur Docker Hub..."
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", 
+                                                  usernameVariable: 'USER', 
+                                                  passwordVariable: 'PASS')]) {
                     sh 'echo $PASS | docker login -u $USER --password-stdin'
-                    sh "docker push ${DOCKER_IMAGE}"
+                    sh "docker push ${IMAGE_NAME}"
                 }
             }
         }
@@ -48,16 +57,15 @@ pipeline {
     }
 
     post {
-        success {
-            echo 'Pipeline terminé avec succès 🚀'
+        always {
+            // 🔹 Afficher l'état des containers à la fin du pipeline
+            sh 'docker ps -a'
         }
+
         failure {
-            echo 'Pipeline échoué ❌'
+            // 🔹 En cas d'échec, afficher les logs des containers web et db
+            sh 'docker-compose logs web'
+            sh 'docker-compose logs db'
         }
     }
 }
-    //Explications :
-//environment : définit une variable pour le nom de l’image Docker, réutilisable dans tout le pipeline
-//withCredentials : permet d’utiliser en toute sécurité ton Docker Hub username/password
-//stage Run Docker Container : optionnel pour tester l’image sur ta machine après push
-//post : affiche un message selon le succès ou l’échec
