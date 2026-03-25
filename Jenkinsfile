@@ -1,21 +1,40 @@
 pipeline {
     agent any
+
     stages {
-        stage('Checkout') {
+        stage('Cloner le projet') {
             steps {
-                git url: 'https://github.com/ton-user/ton-projet.git',
+                // Utilise la credential avec ID github-pat
+                git(
+                    url: 'https://github.com/thiothiod/PROJET_PHP_DEVOPS.git',
+                    branch: 'main',
                     credentialsId: 'github-pat'
+                )
             }
         }
-        stage('Build Docker') {
+
+        stage('Construire Docker') {
             steps {
-                sh 'docker-compose up --build -d'
+                sh 'docker-compose build'
             }
         }
-        stage('Tests') {
+
+        stage('Lancer les conteneurs') {
             steps {
-                sh 'docker exec mon_conteneur php artisan test'
+                sh 'docker-compose up -d'
             }
+        }
+
+        stage('Tester le projet') {
+            steps {
+                sh 'docker exec -it nom_du_conteneur php artisan test'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker ps -a'
         }
     }
 }
