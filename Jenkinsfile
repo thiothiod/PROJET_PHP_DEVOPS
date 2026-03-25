@@ -1,61 +1,21 @@
 pipeline {
     agent any
-
-    environment {
-        COMPOSE_PROJECT_NAME = "miniapp"
-    }
-
     stages {
-        stage('Préparer') {
+        stage('Checkout') {
             steps {
-                script {
-                    sh "docker-compose down || true"
-                }
+                git url: 'https://github.com/ton-user/ton-projet.git',
+                    credentialsId: 'github-pat'
             }
         }
-
-        stage('Build') {
+        stage('Build Docker') {
             steps {
-                script {
-                    sh "docker-compose build --no-cache"
-                }
+                sh 'docker-compose up --build -d'
             }
         }
-
-        stage('Démarrer les conteneurs') {
+        stage('Tests') {
             steps {
-                script {
-                    sh "docker-compose up -d"
-                }
+                sh 'docker exec mon_conteneur php artisan test'
             }
-        }
-
-        stage('Vérifier PostgreSQL') {
-            steps {
-                script {
-                    sh '''
-                    until docker-compose exec db pg_isready -U postgres; do
-                        echo "Postgres non prêt, attente 2s..."
-                        sleep 2
-                    done
-                    echo "Postgres prêt ✅"
-                    '''
-                }
-            }
-        }
-
-        stage('Test application') {
-            steps {
-                script {
-                    sh "curl -I http://localhost:8000 || echo 'Impossible de tester maintenant'"
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            sh "docker-compose down"
         }
     }
 }
