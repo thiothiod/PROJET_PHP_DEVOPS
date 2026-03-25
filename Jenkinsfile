@@ -2,64 +2,44 @@ pipeline {
     agent any
 
     environment {
-        // Définir les variables d'environnement si nécessaire
-        IMAGE_NAME = "mon-projet-image"
-        CONTAINER_NAME = "mon-projet-container"
+        // Ton identifiant GitHub PAT enregistré dans Jenkins
+        GITHUB_CREDENTIALS = 'github-pat'
     }
 
     stages {
-        stage('Cloner le projet') {
+        stage('Cloner le dépôt') {
             steps {
-                // Utilise ton credential GitHub PAT
                 git branch: 'main',
-                    credentialsId: 'github-pat',
+                    credentialsId: "${GITHUB_CREDENTIALS}",
                     url: 'https://github.com/thiothiod/PROJET_PHP_DEVOPS.git'
             }
         }
 
-        stage('Construire Docker') {
+        stage('Placeholder Docker Build') {
             steps {
-                script {
-                    // Vérifie que Docker est disponible
-                    sh 'docker --version'
-                    sh "docker build -t ${IMAGE_NAME} ."
-                }
+                echo 'Ici tu construiras ton image Docker plus tard...'
             }
         }
 
-        stage('Lancer les conteneurs') {
+        stage('Placeholder Docker Run') {
             steps {
-                script {
-                    // Lancer un conteneur à partir de l'image
-                    sh "docker run -d --name ${CONTAINER_NAME} -p 8080:80 ${IMAGE_NAME}"
-                }
+                echo 'Ici tu lanceras tes conteneurs Docker plus tard...'
             }
         }
 
-        stage('Tester le projet') {
+        stage('Placeholder Tests') {
             steps {
-                // Ici tu peux ajouter tes tests automatisés
-                sh 'echo "Tests à ajouter"'
-            }
-        }
-
-        stage('Pousser sur Docker Hub (optionnel)') {
-            steps {
-                script {
-                    // sh "docker login -u <user> -p <password>"
-                    // sh "docker push ${IMAGE_NAME}"
-                    sh 'echo "Push sur Docker Hub si nécessaire"'
-                }
+                echo 'Ici tu exécuteras tes tests plus tard...'
             }
         }
     }
 
     post {
-        always {
-            script {
-                // Affiche les conteneurs pour vérifier
-                sh 'docker ps -a || echo "Docker non disponible"'
-            }
+        success {
+            echo 'Pipeline terminé avec succès : clone Git OK'
+        }
+        failure {
+            echo 'Pipeline échoué : vérifier les logs'
         }
     }
 }
