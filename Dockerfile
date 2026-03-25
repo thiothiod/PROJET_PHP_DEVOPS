@@ -1,5 +1,10 @@
-# Utiliser l'image officielle PHP avec Apache
 FROM php:8.2-apache
+
+LABEL maintainer="BLACKBOXAI <info@blackbox.ai>"
+LABEL description="PHP 8.2 Apache for simple_php_app"
+
+EXPOSE 80
+
 
 # Activer le module Apache 'rewrite' pour permettre les URL propres
 RUN a2enmod rewrite

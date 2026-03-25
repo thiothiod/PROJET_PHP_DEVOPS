@@ -3,20 +3,65 @@ version: '3.9'  # Version de docker-compose, compatible avec les dernières fonc
 services:
   # Service pour le serveur web (Apache + PHP)
   web:
-    build: .  # Construire l'image depuis le Dockerfile présent dans le dossier courant
+    build: .
+    env_file:
+      - .env
     ports:
       - "8000:80"  # Rediriger le port 80 du container vers le port 8000 de l'hôte
     volumes:
       - .:/var/www/html  # Monter le dossier local dans le container pour voir les changements en direct
     depends_on:
-      - db  # S'assurer que la base de données est démarrée avant ce service
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - backend
+
+
 
   # Service pour la base de données MySQL
   db:
     image: mysql:8  # Utiliser l'image officielle MySQL version 8
-    restart: always  # Redémarrer automatiquement si le container plante
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
     environment:
-      MYSQL_DATABASE: test_db  # Nom de la base de données à créer automatiquement
-      MYSQL_ROOT_PASSWORD: root  # Mot de passe pour l'utilisateur root
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
     ports:
       - "3307:3306"  # Rediriger le port MySQL (3306) vers le port 3307 de l'hôte
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+
+volumes:
+  db_data:
+
+networks:
+  backend:
+    driver: bridge
+
